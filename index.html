@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>セビシック練習</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#eee;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;padding:16px 12px;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+h1{font-size:1.5rem;margin-bottom:8px}
+h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
+.screen{display:none;width:100%;max-width:420px;text-align:center;flex-direction:column;align-items:center}
+.screen.active{display:flex}
+.btn{display:inline-flex;align-items:center;justify-content:center;
+  min-width:56px;min-height:48px;padding:10px 18px;border:none;border-radius:12px;
+  font-size:1.15rem;font-weight:600;cursor:pointer;touch-action:manipulation;
+  transition:transform .1s,opacity .1s;-webkit-appearance:none}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.25;pointer-events:none}
+.btn-primary{background:#e94560;color:#fff}
+.btn-secondary{background:#0f3460;color:#fff}
+.btn-accent{background:#4ecca3;color:#1a1a2e}
+.btn-string{width:76px;height:76px;font-size:2rem;border-radius:50%;
+  background:#16213e;border:3px solid #334;color:#eee}
+.btn-string:active{background:#e94560;border-color:#e94560}
+.string-grid{display:flex;gap:14px;margin:24px 0}
+.acc-grid{display:flex;gap:12px;margin:14px 0}
+.acc-grid .btn{width:68px;height:58px;font-size:1.6rem}
+.staff-box{width:100%;max-width:340px;background:#16213e;border-radius:12px;padding:8px;margin:8px 0}
+.note-big{font-size:2.8rem;font-weight:700;margin:6px 0;color:#4ecca3}
+.finger-lbl{font-size:1.05rem;color:#aaa;margin:4px 0}
+.chips{display:flex;gap:5px;margin:8px 0;flex-wrap:wrap;justify-content:center}
+.chip{background:#0f3460;padding:4px 10px;border-radius:8px;font-size:.85rem}
+.chip.cur{background:#e94560}
+.interval-list{width:100%;max-width:340px;margin:12px 0}
+.iv-row{display:flex;align-items:center;padding:4px 0}
+.iv-finger{background:#0f3460;padding:7px 12px;border-radius:8px;font-size:.95rem;min-width:90px;text-align:center}
+.iv-line{flex:1;display:flex;align-items:center;justify-content:center;padding:0 6px}
+.iv-line span{font-size:.8rem;color:#4ecca3;white-space:nowrap}
+.iv-line.close span{color:#e94560}
+.iv-connector{width:2px;height:18px;background:#334;margin:0 auto}
+.meter-wrap{width:100%;max-width:320px;margin:10px 0}
+.meter-bg{height:36px;background:#16213e;border-radius:8px;position:relative;overflow:hidden}
+.meter-zone{position:absolute;left:35%;top:0;height:100%;width:30%;background:rgba(78,204,163,.15)}
+.meter-mid{position:absolute;left:50%;top:0;height:100%;width:1px;background:rgba(255,255,255,.2)}
+.meter-needle{position:absolute;top:2px;bottom:2px;width:3px;background:#e94560;
+  left:50%;transform:translateX(-50%);border-radius:2px;transition:left .06s}
+.meter-labels{display:flex;justify-content:space-between;font-size:.7rem;color:#666;margin-top:2px;padding:0 2px}
+.cents-val{font-size:1.4rem;font-weight:700;margin:4px 0}
+.cents-val.ok{color:#4ecca3}
+.cents-val.ng{color:#e94560}
+.hold-wrap{width:100%;max-width:320px;margin:6px 0}
+.hold-lbl{font-size:.8rem;color:#777;margin-bottom:3px}
+.hold-bg{height:6px;background:#16213e;border-radius:3px;overflow:hidden}
+.hold-fill{height:100%;width:0;background:#4ecca3;border-radius:3px;transition:width .08s linear}
+.prog-wrap{width:100%;max-width:320px;margin:8px 0}
+.prog-bg{height:7px;background:#16213e;border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;background:#4ecca3;transition:width .3s;border-radius:4px}
+.prog-txt{font-size:.8rem;color:#777;margin-top:3px}
+.back-btn{position:fixed;top:12px;left:12px;background:none;border:none;color:#888;
+  font-size:1.6rem;cursor:pointer;z-index:10;touch-action:manipulation;padding:8px}
+.done-title{font-size:2.2rem;color:#4ecca3;margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<button class="back-btn" id="backBtn" onclick="goBack()" style="display:none">&larr;</button>
+
+<!-- Step 1 -->
+<div class="screen active" id="step1">
+<h1>セビシック練習</h1>
+<h2>弦を選択してください</h2>
+<div class="string-grid">
+<button class="btn btn-string" onclick="pickString('G')">G</button>
+<button class="btn btn-string" onclick="pickString('D')">D</button>
+<button class="btn btn-string" onclick="pickString('A')">A</button>
+<button class="btn btn-string" onclick="pickString('E')">E</button>
+</div>
+</div>
+
+<!-- Step 2 -->
+<div class="screen" id="step2">
+<h2 id="s2title">指0の音を選んでください</h2>
+<div class="chips" id="s2chips"></div>
+<div class="staff-box"><svg id="svg2" viewBox="0 0 260 160" width="100%"></svg></div>
+<div class="note-big" id="s2note"></div>
+<div class="acc-grid">
+<button class="btn btn-secondary" id="btnF" onclick="pickAcc(-1)">&#9837;</button>
+<button class="btn btn-secondary" id="btnN" onclick="pickAcc(0)">&#9838;</button>
+<button class="btn btn-secondary" id="btnS" onclick="pickAcc(1)">&#9839;</button>
+</div>
+</div>
+
+<!-- Step 3 -->
+<div class="screen" id="step3">
+<h2 id="s3title"></h2>
+<div class="staff-box"><svg id="svg3" viewBox="0 0 260 160" width="100%"></svg></div>
+<div class="interval-list" id="s3intervals"></div>
+<button class="btn btn-accent" onclick="startPractice()" style="margin-top:12px;font-size:1.2rem;padding:14px 36px">練習スタート</button>
+</div>
+
+<!-- Step 4 -->
+<div class="screen" id="step4">
+<div class="finger-lbl" id="s4finger"></div>
+<div class="note-big" id="s4note"></div>
+<div class="staff-box"><svg id="svg4" viewBox="0 0 260 160" width="100%"></svg></div>
+<button class="btn btn-secondary" id="playBtn" onclick="playRef()" style="margin:6px 0;font-size:1rem;padding:10px 20px">&#128266; 基準音を聴く</button>
+<div class="cents-val" id="centsDisp">-- cent</div>
+<div class="meter-wrap">
+<div class="meter-bg">
+<div class="meter-zone"></div>
+<div class="meter-mid"></div>
+<div class="meter-needle" id="needle"></div>
+</div>
+<div class="meter-labels"><span>-50</span><span>-25</span><span>0</span><span>+25</span><span>+50</span></div>
+</div>
+<div class="hold-wrap">
+<div class="hold-lbl" id="holdLbl">音を保持してください</div>
+<div class="hold-bg"><div class="hold-fill" id="holdFill"></div></div>
+</div>
+<div class="prog-wrap">
+<div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
+<div class="prog-txt" id="progTxt">1 / 24</div>
+</div>
+</div>
+
+<!-- Step 5 -->
+<div class="screen" id="step5">
+<div style="margin-top:60px">
+<div class="done-title">お疲れ様！</div>
+<p style="color:#aaa;margin-bottom:28px">全24音をクリアしました</p>
+<button class="btn btn-accent" onclick="resetApp()" style="font-size:1.2rem;padding:14px 36px">もう一度</button>
+</div>
+</div>
+
+<script>
+/* ===== Data ===== */
+const SD = {
+  G:{n:['G','A','B','C','D'],o:[3,3,3,4,4],hz:[196.00,220.00,246.94,261.63,293.66],jp:['ソ','ラ','シ','ド','レ']},
+  D:{n:['D','E','F','G','A'],o:[4,4,4,4,4],hz:[293.66,329.63,349.23,392.00,440.00],jp:['レ','ミ','ファ','ソ','ラ']},
+  A:{n:['A','B','C','D','E'],o:[4,4,5,5,5],hz:[440.00,493.88,523.25,587.33,659.25],jp:['ラ','シ','ド','レ','ミ']},
+  E:{n:['E','F','G','A','B'],o:[5,5,5,5,5],hz:[659.25,698.46,783.99,880.00,987.77],jp:['ミ','ファ','ソ','ラ','シ']}
+};
+const NP={C:0,D:1,E:2,F:3,G:4,A:5,B:6};
+const S12=Math.pow(2,1/12);
+const SEQ=[0,1,0,1,2,1,2,3,2,3,4,3,2,3,2,3,4,3,2,3,2,1,2,1];
+
+/* ===== State ===== */
+let str=null,cFinger=0,fc=[],pIdx=0;
+let actx=null,analyser=null,mic=null,raf=null,holdT=null,step=1;
+
+/* ===== Helpers ===== */
+function sPos(note,oct){return(oct-4)*7+NP[note]}
+function p2y(p){return 122-p*7}
+function hzAcc(base,a){return a===-1?base/S12:a===1?base*S12:base}
+function jpAcc(base,a){return base+(a===-1?'♭':a===1?'♯':'')}
+function accSym(a){return a===-1?'♭':a===1?'♯':''}
+
+/* ===== Ledger Lines ===== */
+function ledgers(pos){
+  const L=[];
+  if(pos<2){const b=Math.ceil(Math.min(pos,0)/2)*2;for(let p=0;p>=b;p-=2)L.push(p)}
+  if(pos>10){const t=Math.floor(Math.max(pos,12)/2)*2;for(let p=12;p<=t;p+=2)L.push(p)}
+  return L;
+}
+
+/* ===== SVG Staff ===== */
+function drawStaff(id,notes,hiIdx){
+  const svg=document.getElementById(id);
+  let h='';
+  // staff lines
+  for(const p of[2,4,6,8,10]){
+    const y=p2y(p);
+    h+=`<line x1="15" y1="${y}" x2="245" y2="${y}" stroke="#556" stroke-width="1.5"/>`;
+  }
+  // treble clef
+  h+=`<text x="16" y="${p2y(2)+8}" font-size="56" fill="#778" font-family="serif">&#119070;</text>`;
+
+  if(!Array.isArray(notes))notes=[notes];
+  const multi=notes.length>1;
+
+  notes.forEach((nt,i)=>{
+    if(!nt)return;
+    const{sp,acc}=nt;
+    const y=p2y(sp);
+    const hi=hiIdx!==undefined?i===hiIdx:true;
+    const col=hi?'#fff':'#667';
+    const nx=multi?65+i*38:150;
+
+    // ledger lines
+    for(const lp of ledgers(sp)){
+      const ly=p2y(lp);
+      h+=`<line x1="${nx-14}" y1="${ly}" x2="${nx+14}" y2="${ly}" stroke="#556" stroke-width="1.5"/>`;
+    }
+    // note head
+    h+=`<ellipse cx="${nx}" cy="${y}" rx="8" ry="5.5" fill="${col}" transform="rotate(-12,${nx},${y})"/>`;
+    // stem
+    if(sp<6){
+      h+=`<line x1="${nx+7}" y1="${y}" x2="${nx+7}" y2="${y-35}" stroke="${col}" stroke-width="1.5"/>`;
+    }else{
+      h+=`<line x1="${nx-7}" y1="${y}" x2="${nx-7}" y2="${y+35}" stroke="${col}" stroke-width="1.5"/>`;
+    }
+    // accidental
+    if(acc!==0){
+      const sym=acc===-1?'♭':'♯';
+      h+=`<text x="${nx-22}" y="${y+6}" font-size="17" fill="${col}" font-family="serif">${sym}</text>`;
+    }
+  });
+  svg.innerHTML=h;
+}
+
+/* ===== Navigation ===== */
+function show(s){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.getElementById('step'+s).classList.add('active');
+  document.getElementById('backBtn').style.display=(s>1&&s<5)?'block':'none';
+  step=s;
+}
+function goBack(){
+  if(step===4){stopDetect();show(3)}
+  else if(step===3){cFinger=4;fc.pop();show(2);updS2()}
+  else if(step===2){
+    if(cFinger>0){cFinger--;fc.pop();updS2()}
+    else show(1);
+  }
+}
+
+/* ===== Step 1 ===== */
+function pickString(s){str=s;cFinger=0;fc=[];show(2);updS2()}
+
+/* ===== Step 2 ===== */
+function updS2(){
+  const d=SD[str],f=cFinger;
+  document.getElementById('s2title').textContent=`指${f}の音を選んでください`;
+  document.getElementById('s2note').textContent=d.jp[f];
+  document.getElementById('btnF').disabled=f===0;
+  document.getElementById('btnS').disabled=f===0;
+
+  const sp=sPos(d.n[f],d.o[f]);
+  drawStaff('svg2',[{sp,acc:0}]);
+
+  let chips='';
+  for(let i=0;i<5;i++){
+    if(i<fc.length) chips+=`<span class="chip">${fc[i].jp}</span>`;
+    else if(i===cFinger) chips+=`<span class="chip cur">指${i}</span>`;
+    else chips+=`<span class="chip" style="opacity:.3">指${i}</span>`;
+  }
+  document.getElementById('s2chips').innerHTML=chips;
+}
+function pickAcc(a){
+  const d=SD[str],f=cFinger;
+  const sp=sPos(d.n[f],d.o[f]);
+  const hz=hzAcc(d.hz[f],a);
+  const jp=jpAcc(d.jp[f],a);
+  fc.push({acc:a,hz,jp,sp});
+  cFinger++;
+  if(cFinger>=5){show(3);updS3()}
+  else updS2();
+}
+
+/* ===== Step 3 ===== */
+function updS3(){
+  const names=fc.map(f=>f.jp).join('・');
+  document.getElementById('s3title').textContent=`${str}線　${names}`;
+
+  drawStaff('svg3',fc.map(f=>({sp:f.sp,acc:f.acc})));
+
+  let html='';
+  for(let i=0;i<5;i++){
+    html+=`<div class="iv-row"><div class="iv-finger">指${i}　${fc[i].jp}</div></div>`;
+    if(i<4){
+      const cents=Math.round(1200*Math.log2(fc[i+1].hz/fc[i].hz));
+      let lbl,cls='';
+      if(Math.abs(cents-100)<15){lbl='くっつける（半音）';cls='close'}
+      else if(Math.abs(cents-200)<15){lbl='離す（全音）'}
+      else{lbl=`${cents}セント`}
+      html+=`<div class="iv-row"><div class="iv-line ${cls}"><span>┃ ${lbl}</span></div></div>`;
+    }
+  }
+  document.getElementById('s3intervals').innerHTML=html;
+}
+
+/* ===== Step 4 ===== */
+async function startPractice(){
+  pIdx=0;holdT=null;
+  show(4);updS4();
+  if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+  if(actx.state==='suspended')await actx.resume();
+  await startDetect();
+}
+function updS4(){
+  const fi=SEQ[pIdx],nt=fc[fi];
+  document.getElementById('s4finger').textContent=`指${fi}`;
+  document.getElementById('s4note').textContent=nt.jp;
+  drawStaff('svg4',[{sp:nt.sp,acc:nt.acc}]);
+  document.getElementById('progFill').style.width=`${(pIdx/SEQ.length)*100}%`;
+  document.getElementById('progTxt').textContent=`${pIdx+1} / ${SEQ.length}`;
+  document.getElementById('centsDisp').textContent='-- cent';
+  document.getElementById('centsDisp').className='cents-val';
+  document.getElementById('needle').style.left='50%';
+  document.getElementById('holdFill').style.width='0';
+  document.getElementById('holdLbl').textContent='音を保持してください';
+  holdT=null;
+}
+function playRef(){
+  const fi=SEQ[pIdx],hz=fc[fi].hz;
+  if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+  if(actx.state==='suspended')actx.resume();
+  const osc=actx.createOscillator(),g=actx.createGain();
+  osc.type='sine';osc.frequency.value=hz;
+  g.gain.setValueAtTime(.3,actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+1);
+  osc.connect(g);g.connect(actx.destination);
+  osc.start();osc.stop(actx.currentTime+1);
+}
+
+/* ===== Pitch Detection ===== */
+async function startDetect(){
+  try{
+    mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    const src=actx.createMediaStreamSource(mic);
+    analyser=actx.createAnalyser();
+    analyser.fftSize=4096;
+    src.connect(analyser);
+    detect();
+  }catch(e){alert('マイクへのアクセスが必要です。設定を確認してください。')}
+}
+function stopDetect(){
+  if(raf){cancelAnimationFrame(raf);raf=null}
+  if(mic){mic.getTracks().forEach(t=>t.stop());mic=null}
+}
+function detect(){
+  if(!analyser||step!==4)return;
+  const buf=new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  const hz=acorr(buf,actx.sampleRate);
+  const tgt=fc[SEQ[pIdx]].hz;
+
+  if(hz>100&&hz<1500){
+    const cents=Math.round(1200*Math.log2(hz/tgt));
+    const cl=Math.max(-50,Math.min(50,cents));
+    const ce=document.getElementById('centsDisp');
+    ce.textContent=`${cents>0?'+':''}${cents} cent`;
+    const ok=Math.abs(cents)<=15;
+    ce.className='cents-val '+(ok?'ok':'ng');
+    document.getElementById('needle').style.left=`${50+cl}%`;
+
+    if(ok){
+      if(!holdT)holdT=Date.now();
+      const pct=Math.min(100,(Date.now()-holdT)/10);
+      document.getElementById('holdFill').style.width=pct+'%';
+      document.getElementById('holdLbl').textContent=`保持中... ${Math.floor(pct)}%`;
+      if(pct>=100){advance();return}
+    }else{
+      holdT=null;
+      document.getElementById('holdFill').style.width='0';
+      document.getElementById('holdLbl').textContent='音を保持してください';
+    }
+  }else{
+    holdT=null;
+    document.getElementById('holdFill').style.width='0';
+  }
+  raf=requestAnimationFrame(detect);
+}
+function advance(){
+  pIdx++;
+  if(pIdx>=SEQ.length){stopDetect();show(5);return}
+  updS4();
+  raf=requestAnimationFrame(detect);
+}
+
+/* ===== Autocorrelation ===== */
+function acorr(buf,sr){
+  const N=buf.length;
+  let rms=0;
+  for(let i=0;i<N;i++)rms+=buf[i]*buf[i];
+  rms=Math.sqrt(rms/N);
+  if(rms<0.008)return -1;
+
+  const corr=new Float32Array(N);
+  for(let lag=0;lag<N;lag++){
+    let s=0;
+    for(let i=0;i<N-lag;i++)s+=buf[i]*buf[i+lag];
+    corr[lag]=s;
+  }
+  // find first dip
+  let d=0;
+  while(d<N-1&&corr[d]>corr[d+1])d++;
+  // find peak after dip
+  let mv=-1,mp=d;
+  for(let i=d;i<N;i++){if(corr[i]>mv){mv=corr[i];mp=i}}
+  if(mp<1||mp>=N-1)return -1;
+  // confidence check
+  if(mv<0.3*corr[0])return -1;
+  // parabolic interpolation
+  const y1=corr[mp-1],y2=corr[mp],y3=corr[mp+1];
+  const a=(y1+y3-2*y2)/2,b=(y3-y1)/2;
+  const shift=a!==0?-b/(2*a):0;
+  return sr/(mp+shift);
+}
+
+/* ===== Reset ===== */
+function resetApp(){stopDetect();str=null;cFinger=0;fc=[];pIdx=0;show(1)}
+</script>
+</body>
+</html>
