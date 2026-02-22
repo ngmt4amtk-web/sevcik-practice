@@ -268,15 +268,19 @@ function updS3(){
   drawStaff('svg3',fc.map(f=>({sp:f.sp,acc:f.acc})));
 
   let html='';
+  const c01=Math.round(1200*Math.log2(fc[1].hz/fc[0].hz));
+  const f1low=Math.abs(c01-100)<15;
   for(let i=0;i<5;i++){
-    html+=`<div class="iv-row"><div class="iv-finger">指${i}　${fc[i].jp}</div></div>`;
-    if(i<4){
+    let lbl=`指${i}　${fc[i].jp}`;
+    if(i===1&&f1low)lbl+=`　低め`;
+    html+=`<div class="iv-row"><div class="iv-finger">${lbl}</div></div>`;
+    if(i>=1&&i<4){
       const cents=Math.round(1200*Math.log2(fc[i+1].hz/fc[i].hz));
-      let lbl,cls='';
-      if(Math.abs(cents-100)<15){lbl='くっつける（半音）';cls='close'}
-      else if(Math.abs(cents-200)<15){lbl='離す（全音）'}
-      else{lbl=`${cents}セント`}
-      html+=`<div class="iv-row"><div class="iv-line ${cls}"><span>┃ ${lbl}</span></div></div>`;
+      let ivlbl,cls='';
+      if(Math.abs(cents-100)<15){ivlbl='くっつける（半音）';cls='close'}
+      else if(Math.abs(cents-200)<15){ivlbl='離す（全音）'}
+      else{ivlbl=`${cents}セント`}
+      html+=`<div class="iv-row"><div class="iv-line ${cls}"><span>┃ ${ivlbl}</span></div></div>`;
     }
   }
   document.getElementById('s3intervals').innerHTML=html;
