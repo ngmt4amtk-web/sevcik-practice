@@ -78,6 +78,15 @@ h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
 <button class="btn btn-string" onclick="pickString('A')">A</button>
 <button class="btn btn-string" onclick="pickString('E')">E</button>
 </div>
+<div style="margin:16px 0;color:#888;font-size:.9rem">
+A = <select id="baseASelect" onchange="baseA=+this.value" style="background:#16213e;color:#eee;border:1px solid #334;border-radius:6px;padding:4px 8px;font-size:.95rem">
+<option value="440">440</option>
+<option value="441">441</option>
+<option value="442" selected>442</option>
+<option value="443">443</option>
+<option value="444">444</option>
+</select> Hz
+</div>
 </div>
 
 <!-- Step 2 -->
@@ -138,13 +147,23 @@ h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
 <script>
 /* ===== Data ===== */
 const SD = {
-  G:{n:['G','A','B','C','D'],o:[3,3,3,4,4],hz:[196.00,220.00,246.94,261.63,293.66],jp:['ソ','ラ','シ','ド','レ']},
-  D:{n:['D','E','F','G','A'],o:[4,4,4,4,4],hz:[293.66,329.63,349.23,392.00,440.00],jp:['レ','ミ','ファ','ソ','ラ']},
-  A:{n:['A','B','C','D','E'],o:[4,4,5,5,5],hz:[440.00,493.88,523.25,587.33,659.25],jp:['ラ','シ','ド','レ','ミ']},
-  E:{n:['E','F','G','A','B'],o:[5,5,5,5,5],hz:[659.25,698.46,783.99,880.00,987.77],jp:['ミ','ファ','ソ','ラ','シ']}
+  G:{n:['G','A','B','C','D'],o:[3,3,3,4,4],jp:['ソ','ラ','シ','ド','レ']},
+  D:{n:['D','E','F','G','A'],o:[4,4,4,4,4],jp:['レ','ミ','ファ','ソ','ラ']},
+  A:{n:['A','B','C','D','E'],o:[4,4,5,5,5],jp:['ラ','シ','ド','レ','ミ']},
+  E:{n:['E','F','G','A','B'],o:[5,5,5,5,5],jp:['ミ','ファ','ソ','ラ','シ']}
 };
 const NP={C:0,D:1,E:2,F:3,G:4,A:5,B:6};
-const S12=Math.pow(2,1/12);
+/* ===== Pythagorean Tuning ===== */
+let baseA=442;
+const APOTOME=2187/2048;
+const PYTH={
+  G:[1,9/8,81/64,4/3,3/2],
+  D:[1,9/8,32/27,4/3,3/2],
+  A:[1,9/8,32/27,4/3,3/2],
+  E:[1,256/243,32/27,4/3,3/2]
+};
+function openHz(s){const d=baseA*2/3,g=d*2/3,e=baseA*3/2;return{G:g,D:d,A:baseA,E:e}[s]}
+function noteHz(s,f){return openHz(s)*PYTH[s][f]}
 const SEQ=[0,1,0,1,2,1,2,3,2,3,4,3,2,3,2,3,4,3,2,3,2,1,2,1];
 
 /* ===== State ===== */
@@ -154,7 +173,7 @@ let actx=null,analyser=null,mic=null,raf=null,holdT=null,passed=false,step=1;
 /* ===== Helpers ===== */
 function sPos(note,oct){return(oct-4)*7+NP[note]}
 function p2y(p){return 122-p*7}
-function hzAcc(base,a){return a===-1?base/S12:a===1?base*S12:base}
+function hzAcc(base,a){return a===-1?base/APOTOME:a===1?base*APOTOME:base}
 function jpAcc(base,a){return base+(a===-1?'♭':a===1?'♯':'')}
 function accSym(a){return a===-1?'♭':a===1?'♯':''}
 
@@ -252,7 +271,7 @@ function updS2(){
 function pickAcc(a){
   const d=SD[str],f=cFinger;
   const sp=sPos(d.n[f],d.o[f]);
-  const hz=hzAcc(d.hz[f],a);
+  const hz=hzAcc(noteHz(str,f),a);
   const jp=jpAcc(d.jp[f],a);
   fc.push({acc:a,hz,jp,sp});
   cFinger++;
@@ -267,21 +286,29 @@ function updS3(){
 
   drawStaff('svg3',fc.map(f=>({sp:f.sp,acc:f.acc})));
 
-  let html='';
-  const c01=Math.round(1200*Math.log2(fc[1].hz/fc[0].hz));
-  const f1low=Math.abs(c01-100)<15;
-  for(let i=0;i<5;i++){
-    let lbl=`指${i}　${fc[i].jp}`;
-    if(i===1&&f1low)lbl+=`　低め`;
-    html+=`<div class="iv-row"><div class="iv-finger">${lbl}</div></div>`;
-    if(i>=1&&i<4){
-      const cents=Math.round(1200*Math.log2(fc[i+1].hz/fc[i].hz));
-      let ivlbl,cls='';
-      if(Math.abs(cents-100)<15){ivlbl='くっつける（半音）';cls='close'}
-      else if(Math.abs(cents-200)<15){ivlbl='離す（全音）'}
-      else{ivlbl=`${cents}セント`}
-      html+=`<div class="iv-row"><div class="iv-line ${cls}"><span>┃ ${ivlbl}</span></div></div>`;
+  const isClose=(a,b)=>Math.abs(Math.round(1200*Math.log2(b/a)))<150;
+  function advice(i){
+    if(i===0)return '';
+    if(i===1)return isClose(fc[0].hz,fc[1].hz)?'低め':'高め';
+    if(i===2){
+      if(isClose(fc[1].hz,fc[2].hz))return '1とくっつける';
+      if(isClose(fc[2].hz,fc[3].hz))return '3とくっつける';
+      const c=Math.round(1200*Math.log2(fc[2].hz/openHz(str)));
+      return c<350?'低め':'高め';
     }
+    if(i===3){
+      if(isClose(fc[2].hz,fc[3].hz))return '2とくっつける';
+      if(isClose(fc[3].hz,fc[4].hz))return '4とくっつける';
+      return '気持ち高め';
+    }
+    if(i===4)return isClose(fc[3].hz,fc[4].hz)?'3とくっつける':'高め';
+    return '';
+  }
+  let html='';
+  for(let i=0;i<5;i++){
+    const adv=advice(i);
+    const advHtml=adv?`<span style="color:#4ecca3;font-size:.85rem;margin-left:8px">${adv}</span>`:'';
+    html+=`<div class="iv-row"><div class="iv-finger">指${i}　${fc[i].jp}${advHtml}</div></div>`;
   }
   document.getElementById('s3intervals').innerHTML=html;
 }
