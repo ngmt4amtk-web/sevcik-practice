@@ -149,7 +149,7 @@ const SEQ=[0,1,0,1,2,1,2,3,2,3,4,3,2,3,2,3,4,3,2,3,2,1,2,1];
 
 /* ===== State ===== */
 let str=null,cFinger=0,fc=[],pIdx=0;
-let actx=null,analyser=null,mic=null,raf=null,holdT=null,step=1;
+let actx=null,analyser=null,mic=null,raf=null,holdT=null,passed=false,step=1;
 
 /* ===== Helpers ===== */
 function sPos(note,oct){return(oct-4)*7+NP[note]}
@@ -302,7 +302,7 @@ function updS4(){
   document.getElementById('needle').style.left='50%';
   document.getElementById('holdFill').style.width='0';
   document.getElementById('holdLbl').textContent='音を保持してください';
-  holdT=null;
+  holdT=null;passed=false;
 }
 function playRef(){
   const fi=SEQ[pIdx],hz=fc[fi].hz;
@@ -349,11 +349,19 @@ function detect(){
 
     if(ok){
       if(!holdT)holdT=Date.now();
-      const pct=Math.min(100,(Date.now()-holdT)/10);
+      const elapsed=Date.now()-holdT;
+      const pct=Math.min(100,elapsed/10);
       document.getElementById('holdFill').style.width=pct+'%';
-      document.getElementById('holdLbl').textContent=`保持中... ${Math.floor(pct)}%`;
-      if(pct>=100){advance();return}
+      document.getElementById('holdLbl').textContent='保持中...';
+      if(!passed&&elapsed>=500)passed=true;
+      if(elapsed>=1000){
+        document.getElementById('holdLbl').textContent='合格！';
+        document.getElementById('holdLbl').style.color='#4ecca3';
+        setTimeout(()=>{document.getElementById('holdLbl').style.color='';advance()},400);
+        return;
+      }
     }else{
+      if(passed){passed=false;advance();return}
       holdT=null;
       document.getElementById('holdFill').style.width='0';
       document.getElementById('holdLbl').textContent='音を保持してください';
@@ -402,7 +410,7 @@ function acorr(buf,sr){
 }
 
 /* ===== Reset ===== */
-function resetApp(){stopDetect();str=null;cFinger=0;fc=[];pIdx=0;show(1)}
+function resetApp(){stopDetect();str=null;cFinger=0;fc=[];pIdx=0;passed=false;show(1)}
 </script>
 </body>
 </html>
