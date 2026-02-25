@@ -78,31 +78,6 @@ h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
 <button class="btn btn-string" onclick="pickString('A')">A</button>
 <button class="btn btn-string" onclick="pickString('E')">E</button>
 </div>
-<div style="margin:16px 0;color:#888;font-size:.9rem">
-A = <select id="baseASelect" onchange="baseA=+this.value" style="background:#16213e;color:#eee;border:1px solid #334;border-radius:6px;padding:4px 8px;font-size:.95rem">
-<option value="440">440</option>
-<option value="441">441</option>
-<option value="442" selected>442</option>
-<option value="443">443</option>
-<option value="444">444</option>
-</select> Hz
-</div>
-<div style="margin:8px 0;display:flex;flex-direction:column;gap:8px;align-items:center;font-size:.9rem;color:#888">
-<div>モード:
-<select id="modeSelect" onchange="mode=this.value" style="background:#16213e;color:#eee;border:1px solid #334;border-radius:6px;padding:4px 8px;font-size:.9rem">
-<option value="full" selected>登り降り（24音）</option>
-<option value="asc">登りのみ（12音）</option>
-</select>
-</div>
-<div>音程幅:
-<select id="tolSelect" onchange="tolerance=+this.value;updMeterZone()" style="background:#16213e;color:#eee;border:1px solid #334;border-radius:6px;padding:4px 8px;font-size:.9rem">
-<option value="25">やさしい（±25c）</option>
-<option value="15" selected>ふつう（±15c）</option>
-<option value="8">きびしい（±8c）</option>
-</select>
-</div>
-<div><label style="cursor:pointer"><input type="checkbox" id="taCheck" onchange="timeAttack=this.checked" style="margin-right:6px;vertical-align:middle">タイムアタック</label></div>
-</div>
 </div>
 
 <!-- Step 2 -->
@@ -123,7 +98,11 @@ A = <select id="baseASelect" onchange="baseA=+this.value" style="background:#162
 <h2 id="s3title"></h2>
 <div class="staff-box"><svg id="svg3" viewBox="0 0 260 160" width="100%"></svg></div>
 <div class="interval-list" id="s3intervals"></div>
-<button class="btn btn-accent" onclick="startPractice()" style="margin-top:12px;font-size:1.2rem;padding:14px 36px">練習スタート</button>
+<div style="display:flex;gap:10px;margin-top:12px">
+<button class="btn btn-accent" onclick="timeAttack=false;startPractice()" style="font-size:1.2rem;padding:14px 28px">練習スタート</button>
+<button class="btn btn-primary" onclick="timeAttack=true;startPractice()" style="font-size:1.2rem;padding:14px 28px">⏱ タイムアタック</button>
+</div>
+<button class="btn" onclick="openSettings()" style="margin-top:10px;font-size:.9rem;padding:8px 18px;background:#16213e;color:#888">⚙ 設定</button>
 </div>
 
 <!-- Step 4 -->
@@ -159,6 +138,42 @@ A = <select id="baseASelect" onchange="baseA=+this.value" style="background:#162
 <p id="doneMsg" style="color:#aaa;margin-bottom:12px">全24音をクリアしました</p>
 <p id="doneTime" style="color:#e94560;font-size:1.4rem;font-weight:700;margin-bottom:28px;display:none"></p>
 <button class="btn btn-accent" onclick="resetApp()" style="font-size:1.2rem;padding:14px 36px">もう一度</button>
+</div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);
+  display:none;align-items:center;justify-content:center" onclick="if(event.target===this)closeSettings()">
+<div style="background:#16213e;border-radius:16px;padding:24px;width:90%;max-width:340px;text-align:left">
+<h3 style="font-size:1.1rem;margin-bottom:16px;text-align:center">⚙ 設定</h3>
+<div style="margin-bottom:14px">
+<label style="font-size:.9rem;color:#aaa">A =</label>
+<select id="baseASelect" onchange="baseA=+this.value" style="margin-left:8px;background:#1a1a2e;color:#eee;border:1px solid #334;border-radius:6px;padding:6px 10px;font-size:.95rem">
+<option value="440">440 Hz</option>
+<option value="441">441 Hz</option>
+<option value="442" selected>442 Hz</option>
+<option value="443">443 Hz</option>
+<option value="444">444 Hz</option>
+</select>
+</div>
+<div style="margin-bottom:14px">
+<label style="font-size:.9rem;color:#aaa">モード</label>
+<select id="modeSelect" onchange="mode=this.value" style="margin-left:8px;background:#1a1a2e;color:#eee;border:1px solid #334;border-radius:6px;padding:6px 10px;font-size:.95rem">
+<option value="full" selected>登り降り（24音）</option>
+<option value="asc">登りのみ（12音）</option>
+</select>
+</div>
+<div style="margin-bottom:18px">
+<label style="font-size:.9rem;color:#aaa">音程幅</label>
+<select id="tolSelect" onchange="tolerance=+this.value;updMeterZone()" style="margin-left:8px;background:#1a1a2e;color:#eee;border:1px solid #334;border-radius:6px;padding:6px 10px;font-size:.95rem">
+<option value="25">やさしい（±25c）</option>
+<option value="15" selected>ふつう（±15c）</option>
+<option value="8">きびしい（±8c）</option>
+</select>
+</div>
+<div style="text-align:center">
+<button class="btn btn-secondary" onclick="closeSettings()" style="padding:10px 32px;font-size:1rem">閉じる</button>
+</div>
 </div>
 </div>
 
@@ -423,30 +438,33 @@ function detect(){
     document.getElementById('needle').style.left=`${50+cl}%`;
 
     if(ok){
-      if(timeAttack){advance();return}
       if(!holdT)holdT=Date.now();
       const elapsed=Date.now()-holdT;
-      const pct=Math.min(100,elapsed/10);
-      document.getElementById('holdFill').style.width=pct+'%';
-      document.getElementById('holdLbl').textContent='保持中...';
-      if(!passed&&elapsed>=500)passed=true;
-      if(elapsed>=1000){
-        document.getElementById('holdLbl').textContent='合格！';
-        document.getElementById('holdLbl').style.color='#4ecca3';
-        setTimeout(()=>{document.getElementById('holdLbl').style.color='';advance()},400);
-        return;
+      if(timeAttack){
+        if(elapsed>=400){advance();return}
+      }else{
+        const pct=Math.min(100,elapsed/10);
+        document.getElementById('holdFill').style.width=pct+'%';
+        document.getElementById('holdLbl').textContent='保持中...';
+        if(!passed&&elapsed>=500)passed=true;
+        if(elapsed>=1000){
+          document.getElementById('holdLbl').textContent='合格！';
+          document.getElementById('holdLbl').style.color='#4ecca3';
+          setTimeout(()=>{document.getElementById('holdLbl').style.color='';advance()},400);
+          return;
+        }
       }
     }else{
+      holdT=null;
       if(!timeAttack){
         if(passed){passed=false;advance();return}
-        holdT=null;
         document.getElementById('holdFill').style.width='0';
         document.getElementById('holdLbl').textContent='音を保持してください';
       }
     }
   }else{
+    holdT=null;
     if(!timeAttack){
-      holdT=null;
       document.getElementById('holdFill').style.width='0';
     }
   }
@@ -503,6 +521,10 @@ function acorr(buf,sr){
   const shift=a!==0?-b/(2*a):0;
   return sr/(mp+shift);
 }
+
+/* ===== Settings Modal ===== */
+function openSettings(){document.getElementById('settingsModal').style.display='flex'}
+function closeSettings(){document.getElementById('settingsModal').style.display='none'}
 
 /* ===== Reset ===== */
 function resetApp(){stopDetect();str=null;cFinger=0;fc=[];pIdx=0;passed=false;startTime=null;show(1)}
