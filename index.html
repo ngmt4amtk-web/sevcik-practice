@@ -87,6 +87,22 @@ A = <select id="baseASelect" onchange="baseA=+this.value" style="background:#162
 <option value="444">444</option>
 </select> Hz
 </div>
+<div style="margin:8px 0;display:flex;flex-direction:column;gap:8px;align-items:center;font-size:.9rem;color:#888">
+<div>モード:
+<select id="modeSelect" onchange="mode=this.value" style="background:#16213e;color:#eee;border:1px solid #334;border-radius:6px;padding:4px 8px;font-size:.9rem">
+<option value="full" selected>登り降り（24音）</option>
+<option value="asc">登りのみ（12音）</option>
+</select>
+</div>
+<div>音程幅:
+<select id="tolSelect" onchange="tolerance=+this.value;updMeterZone()" style="background:#16213e;color:#eee;border:1px solid #334;border-radius:6px;padding:4px 8px;font-size:.9rem">
+<option value="25">やさしい（±25c）</option>
+<option value="15" selected>ふつう（±15c）</option>
+<option value="8">きびしい（±8c）</option>
+</select>
+</div>
+<div><label style="cursor:pointer"><input type="checkbox" id="taCheck" onchange="timeAttack=this.checked" style="margin-right:6px;vertical-align:middle">タイムアタック</label></div>
+</div>
 </div>
 
 <!-- Step 2 -->
@@ -112,6 +128,7 @@ A = <select id="baseASelect" onchange="baseA=+this.value" style="background:#162
 
 <!-- Step 4 -->
 <div class="screen" id="step4">
+<div id="timerDisp" style="font-size:1.6rem;font-weight:700;color:#e94560;margin-bottom:4px;display:none">00:00.0</div>
 <div class="finger-lbl" id="s4finger"></div>
 <div class="note-big" id="s4note"></div>
 <div class="staff-box"><svg id="svg4" viewBox="0 0 260 160" width="100%"></svg></div>
@@ -139,7 +156,8 @@ A = <select id="baseASelect" onchange="baseA=+this.value" style="background:#162
 <div class="screen" id="step5">
 <div style="margin-top:60px">
 <div class="done-title">お疲れ様！</div>
-<p style="color:#aaa;margin-bottom:28px">全24音をクリアしました</p>
+<p id="doneMsg" style="color:#aaa;margin-bottom:12px">全24音をクリアしました</p>
+<p id="doneTime" style="color:#e94560;font-size:1.4rem;font-weight:700;margin-bottom:28px;display:none"></p>
 <button class="btn btn-accent" onclick="resetApp()" style="font-size:1.2rem;padding:14px 36px">もう一度</button>
 </div>
 </div>
@@ -169,6 +187,7 @@ const SEQ=[0,1,0,1,2,1,2,3,2,3,4,3,2,3,2,3,4,3,2,3,2,1,2,1];
 /* ===== State ===== */
 let str=null,cFinger=0,fc=[],pIdx=0;
 let actx=null,analyser=null,mic=null,raf=null,holdT=null,passed=false,step=1;
+let mode='full',tolerance=15,timeAttack=false,startTime=null;
 
 /* ===== Helpers ===== */
 function sPos(note,oct){return(oct-4)*7+NP[note]}
@@ -176,6 +195,13 @@ function p2y(p){return 122-p*7}
 function hzAcc(base,a){return a===-1?base/APOTOME:a===1?base*APOTOME:base}
 function jpAcc(base,a){return base+(a===-1?'♭':a===1?'♯':'')}
 function accSym(a){return a===-1?'♭':a===1?'♯':''}
+function getSeq(){return mode==='asc'?SEQ.slice(0,12):SEQ}
+function updMeterZone(){
+  const z=document.querySelector('.meter-zone');if(!z)return;
+  if(tolerance===25){z.style.left='25%';z.style.width='50%'}
+  else if(tolerance===8){z.style.left='42%';z.style.width='16%'}
+  else{z.style.left='35%';z.style.width='30%'}
+}
 
 /* ===== Ledger Lines ===== */
 function ledgers(pos){
@@ -316,27 +342,37 @@ function updS3(){
 /* ===== Step 4 ===== */
 async function startPractice(){
   pIdx=0;holdT=null;
+  if(timeAttack)startTime=Date.now();else startTime=null;
+  updMeterZone();
   show(4);updS4();
   if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
   if(actx.state==='suspended')await actx.resume();
   await startDetect();
 }
 function updS4(){
-  const fi=SEQ[pIdx],nt=fc[fi];
+  const seq=getSeq();
+  const fi=seq[pIdx],nt=fc[fi];
   document.getElementById('s4finger').textContent=`指${fi}`;
   document.getElementById('s4note').textContent=nt.jp;
   drawStaff('svg4',[{sp:nt.sp,acc:nt.acc}]);
-  document.getElementById('progFill').style.width=`${(pIdx/SEQ.length)*100}%`;
-  document.getElementById('progTxt').textContent=`${pIdx+1} / ${SEQ.length}`;
+  document.getElementById('progFill').style.width=`${(pIdx/seq.length)*100}%`;
+  document.getElementById('progTxt').textContent=`${pIdx+1} / ${seq.length}`;
   document.getElementById('centsDisp').textContent='-- cent';
   document.getElementById('centsDisp').className='cents-val';
   document.getElementById('needle').style.left='50%';
   document.getElementById('holdFill').style.width='0';
-  document.getElementById('holdLbl').textContent='音を保持してください';
+  const holdWrap=document.querySelector('.hold-wrap');
+  if(timeAttack){
+    holdWrap.style.display='none';
+  }else{
+    holdWrap.style.display='';
+    document.getElementById('holdLbl').textContent='音を保持してください';
+  }
+  document.getElementById('timerDisp').style.display=timeAttack?'block':'none';
   holdT=null;passed=false;
 }
 function playRef(){
-  const fi=SEQ[pIdx],hz=fc[fi].hz;
+  const fi=getSeq()[pIdx],hz=fc[fi].hz;
   if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
   if(actx.state==='suspended')actx.resume();
   const osc=actx.createOscillator(),g=actx.createGain();
@@ -367,18 +403,27 @@ function detect(){
   const buf=new Float32Array(analyser.fftSize);
   analyser.getFloatTimeDomainData(buf);
   const hz=acorr(buf,actx.sampleRate);
-  const tgt=fc[SEQ[pIdx]].hz;
+  const seq=getSeq();
+  const tgt=fc[seq[pIdx]].hz;
+
+  // タイマー更新
+  if(timeAttack&&startTime){
+    const el=Date.now()-startTime;
+    const m=Math.floor(el/60000);const s=((el%60000)/1000).toFixed(1);
+    document.getElementById('timerDisp').textContent=`${String(m).padStart(2,'0')}:${s.padStart(4,'0')}`;
+  }
 
   if(hz>100&&hz<1500){
     const cents=Math.round(1200*Math.log2(hz/tgt));
     const cl=Math.max(-50,Math.min(50,cents));
     const ce=document.getElementById('centsDisp');
     ce.textContent=`${cents>0?'+':''}${cents} cent`;
-    const ok=Math.abs(cents)<=15;
+    const ok=Math.abs(cents)<=tolerance;
     ce.className='cents-val '+(ok?'ok':'ng');
     document.getElementById('needle').style.left=`${50+cl}%`;
 
     if(ok){
+      if(timeAttack){advance();return}
       if(!holdT)holdT=Date.now();
       const elapsed=Date.now()-holdT;
       const pct=Math.min(100,elapsed/10);
@@ -392,20 +437,39 @@ function detect(){
         return;
       }
     }else{
-      if(passed){passed=false;advance();return}
-      holdT=null;
-      document.getElementById('holdFill').style.width='0';
-      document.getElementById('holdLbl').textContent='音を保持してください';
+      if(!timeAttack){
+        if(passed){passed=false;advance();return}
+        holdT=null;
+        document.getElementById('holdFill').style.width='0';
+        document.getElementById('holdLbl').textContent='音を保持してください';
+      }
     }
   }else{
-    holdT=null;
-    document.getElementById('holdFill').style.width='0';
+    if(!timeAttack){
+      holdT=null;
+      document.getElementById('holdFill').style.width='0';
+    }
   }
   raf=requestAnimationFrame(detect);
 }
+function showDone(){
+  const seq=getSeq();
+  document.getElementById('doneMsg').textContent=`全${seq.length}音をクリアしました`;
+  const dt=document.getElementById('doneTime');
+  if(timeAttack&&startTime){
+    const el=Date.now()-startTime;
+    const m=Math.floor(el/60000);const s=((el%60000)/1000).toFixed(1);
+    dt.textContent=`⏱ ${String(m).padStart(2,'0')}:${s.padStart(4,'0')}`;
+    dt.style.display='block';
+  }else{
+    dt.style.display='none';
+  }
+  show(5);
+}
 function advance(){
   pIdx++;
-  if(pIdx>=SEQ.length){stopDetect();show(5);return}
+  const seq=getSeq();
+  if(pIdx>=seq.length){stopDetect();showDone();return}
   updS4();
   raf=requestAnimationFrame(detect);
 }
@@ -441,7 +505,7 @@ function acorr(buf,sr){
 }
 
 /* ===== Reset ===== */
-function resetApp(){stopDetect();str=null;cFinger=0;fc=[];pIdx=0;passed=false;show(1)}
+function resetApp(){stopDetect();str=null;cFinger=0;fc=[];pIdx=0;passed=false;startTime=null;show(1)}
 </script>
 </body>
 </html>
