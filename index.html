@@ -235,8 +235,8 @@ function updMeterZone(){
 /* ===== Ledger Lines ===== */
 function ledgers(pos){
   const L=[];
-  if(pos<2){const b=Math.ceil(Math.min(pos,0)/2)*2;for(let p=0;p>=b;p-=2)L.push(p)}
-  if(pos>10){const t=Math.floor(Math.max(pos,12)/2)*2;for(let p=12;p<=t;p+=2)L.push(p)}
+  if(pos<=0){for(let p=0;p>=pos;p-=2)L.push(p)}
+  if(pos>=12){for(let p=12;p<=pos;p+=2)L.push(p)}
   return L;
 }
 
