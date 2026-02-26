@@ -219,6 +219,8 @@ const SEQ=[0,1,0,1,2,1,2,3,2,3,4,3,2,3,2,3,4,3,2,3,2,1,2,1];
 let str=null,cFinger=0,fc=[],pIdx=0;
 let actx=null,analyser=null,mic=null,raf=null,holdT=null,passed=false,step=1;
 let mode='full',tolerance=15,timeAttack=false,startTime=null;
+let graceT=null;const GRACE_MS=150;
+let smoothHz=0;
 const STR_COL={G:'#4a9eff',D:'#ff8c00',A:'#e94560',E:'#4ecca3'};
 
 /* ===== Helpers ===== */
@@ -408,7 +410,7 @@ function updS4(){
   }
   document.getElementById('timerDisp').style.display=timeAttack?'block':'none';
   document.getElementById('skipBtn').style.display=timeAttack?'none':'inline-flex';
-  holdT=null;passed=false;
+  holdT=null;passed=false;graceT=null;smoothHz=0;
 }
 function playRef(){
   const fi=getSeq()[pIdx],hz=fc[fi].hz;
@@ -453,7 +455,9 @@ function detect(){
   }
 
   if(hz>100&&hz<1500){
-    const cents=Math.round(1200*Math.log2(hz/tgt));
+    if(smoothHz===0||Math.abs(1200*Math.log2(hz/smoothHz))>80)smoothHz=hz;
+    else smoothHz=smoothHz*0.6+hz*0.4;
+    const cents=Math.round(1200*Math.log2(smoothHz/tgt));
     const cl=Math.max(-50,Math.min(50,cents));
     const ce=document.getElementById('centsDisp');
     ce.textContent=`${cents>0?'+':''}${cents} cent`;
@@ -462,6 +466,7 @@ function detect(){
     document.getElementById('needle').style.left=`${50+cl}%`;
 
     if(ok){
+      graceT=null;
       if(!holdT)holdT=Date.now();
       const elapsed=Date.now()-holdT;
       if(timeAttack){
@@ -478,8 +483,18 @@ function detect(){
           return;
         }
       }
+    }else if(holdT&&!passed){
+      // 保持中に外れた → 猶予期間
+      if(!graceT)graceT=Date.now();
+      if(Date.now()-graceT>GRACE_MS){
+        holdT=null;graceT=null;
+        if(!timeAttack){
+          document.getElementById('holdFill').style.width='0';
+          document.getElementById('holdLbl').textContent='音を保持してください';
+        }
+      }
     }else{
-      holdT=null;
+      holdT=null;graceT=null;
       if(!timeAttack){
         if(passed){passed=false;advance();return}
         document.getElementById('holdFill').style.width='0';
@@ -487,7 +502,7 @@ function detect(){
       }
     }
   }else{
-    holdT=null;
+    smoothHz=0;holdT=null;graceT=null;
     if(!timeAttack){
       document.getElementById('holdFill').style.width='0';
     }
@@ -535,7 +550,7 @@ function showPass(){
   playPassSound();
 }
 function skipNext(){
-  holdT=null;passed=false;
+  holdT=null;passed=false;graceT=null;smoothHz=0;
   pIdx++;
   const seq=getSeq();
   if(pIdx>=seq.length){stopDetect();showDone();return}
