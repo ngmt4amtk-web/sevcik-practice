@@ -72,6 +72,7 @@ h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
   50%{opacity:1;transform:translate(-50%,-50%) scale(1)}
   100%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}
 }
+.pass-finger{font-size:2.2rem;font-weight:700;margin-top:-.5rem}
 </style>
 </head>
 <body>
@@ -84,10 +85,10 @@ h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
 <h1>セビシック練習</h1>
 <h2>弦を選択してください</h2>
 <div class="string-grid">
-<button class="btn btn-string" onclick="pickString('G')">G</button>
-<button class="btn btn-string" onclick="pickString('D')">D</button>
-<button class="btn btn-string" onclick="pickString('A')">A</button>
-<button class="btn btn-string" onclick="pickString('E')">E</button>
+<button class="btn btn-string" onclick="pickString('G')" style="border-color:#4a9eff;color:#4a9eff">G</button>
+<button class="btn btn-string" onclick="pickString('D')" style="border-color:#ff8c00;color:#ff8c00">D</button>
+<button class="btn btn-string" onclick="pickString('A')" style="border-color:#e94560;color:#e94560">A</button>
+<button class="btn btn-string" onclick="pickString('E')" style="border-color:#4ecca3;color:#4ecca3">E</button>
 </div>
 </div>
 
@@ -140,6 +141,7 @@ h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
 <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
 <div class="prog-txt" id="progTxt">1 / 24</div>
 </div>
+<button class="btn btn-secondary" id="skipBtn" onclick="skipNext()" style="margin-top:10px;font-size:1rem;padding:10px 28px;display:none">次へ &rarr;</button>
 </div>
 
 <!-- Step 5 -->
@@ -214,6 +216,7 @@ const SEQ=[0,1,0,1,2,1,2,3,2,3,4,3,2,3,2,3,4,3,2,3,2,1,2,1];
 let str=null,cFinger=0,fc=[],pIdx=0;
 let actx=null,analyser=null,mic=null,raf=null,holdT=null,passed=false,step=1;
 let mode='full',tolerance=15,timeAttack=false,startTime=null;
+const STR_COL={G:'#4a9eff',D:'#ff8c00',A:'#e94560',E:'#4ecca3'};
 
 /* ===== Helpers ===== */
 function sPos(note,oct){return(oct-4)*7+NP[note]}
@@ -334,7 +337,10 @@ function pickAcc(a){
 /* ===== Step 3 ===== */
 function updS3(){
   const names=fc.map(f=>f.jp).join('・');
-  document.getElementById('s3title').textContent=`${str}線　${names}`;
+  const col=STR_COL[str]||'#4ecca3';
+  const s3t=document.getElementById('s3title');
+  s3t.textContent=`${str}線　${names}`;
+  s3t.style.color=col;
 
   drawStaff('svg3',fc.map(f=>({sp:f.sp,acc:f.acc})));
 
@@ -378,8 +384,11 @@ async function startPractice(){
 function updS4(){
   const seq=getSeq();
   const fi=seq[pIdx],nt=fc[fi];
+  const col=STR_COL[str]||'#4ecca3';
   document.getElementById('s4finger').textContent=`指${fi}`;
-  document.getElementById('s4note').textContent=nt.jp;
+  const noteEl=document.getElementById('s4note');
+  noteEl.textContent=nt.jp;
+  noteEl.style.color=col;
   drawStaff('svg4',[{sp:nt.sp,acc:nt.acc}]);
   document.getElementById('progFill').style.width=`${(pIdx/seq.length)*100}%`;
   document.getElementById('progTxt').textContent=`${pIdx+1} / ${seq.length}`;
@@ -395,6 +404,7 @@ function updS4(){
     document.getElementById('holdLbl').textContent='音を保持してください';
   }
   document.getElementById('timerDisp').style.display=timeAttack?'block':'none';
+  document.getElementById('skipBtn').style.display=timeAttack?'none':'inline-flex';
   holdT=null;passed=false;
 }
 function playRef(){
@@ -495,11 +505,38 @@ function showDone(){
   }
   show(5);
 }
+function playPassSound(){
+  if(!actx)return;
+  const now=actx.currentTime;
+  [880,1320].forEach((f,i)=>{
+    const t=now+i*0.1;
+    const g=actx.createGain();
+    g.connect(actx.destination);
+    g.gain.setValueAtTime(0.1,t);
+    g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
+    const o=actx.createOscillator();
+    o.type='triangle';o.frequency.value=f;
+    o.connect(g);o.start(t);o.stop(t+0.4);
+  });
+}
 function showPass(){
   const el=document.getElementById('passFlash');
+  const fi=getSeq()[pIdx];
+  const col=STR_COL[str]||'#4ecca3';
+  el.style.color=col;
+  el.style.textShadow=`0 0 40px ${col}66`;
+  el.innerHTML=`○<div class="pass-finger">指${fi}</div>`;
   el.classList.remove('show');
   void el.offsetWidth;
   el.classList.add('show');
+  playPassSound();
+}
+function skipNext(){
+  holdT=null;passed=false;
+  pIdx++;
+  const seq=getSeq();
+  if(pIdx>=seq.length){stopDetect();showDone();return}
+  updS4();
 }
 function advance(){
   showPass();
