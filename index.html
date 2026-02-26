@@ -150,7 +150,10 @@ h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
 <div class="done-title">お疲れ様！</div>
 <p id="doneMsg" style="color:#aaa;margin-bottom:12px">全24音をクリアしました</p>
 <p id="doneTime" style="color:#e94560;font-size:1.4rem;font-weight:700;margin-bottom:28px;display:none"></p>
-<button class="btn btn-accent" onclick="resetApp()" style="font-size:1.2rem;padding:14px 36px">もう一度</button>
+<div style="display:flex;gap:12px">
+<button class="btn btn-accent" onclick="retryPractice()" style="font-size:1.1rem;padding:14px 24px">もう一度</button>
+<button class="btn btn-secondary" onclick="resetApp()" style="font-size:1.1rem;padding:14px 24px">最初から</button>
+</div>
 </div>
 </div>
 
@@ -582,6 +585,7 @@ function openSettings(){document.getElementById('settingsModal').style.display='
 function closeSettings(){document.getElementById('settingsModal').style.display='none'}
 
 /* ===== Reset ===== */
+function retryPractice(){stopDetect();pIdx=0;passed=false;startTime=null;startPractice()}
 function resetApp(){stopDetect();str=null;cFinger=0;fc=[];pIdx=0;passed=false;startTime=null;show(1)}
 </script>
 </body>
