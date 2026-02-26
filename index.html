@@ -62,11 +62,22 @@ h2{font-size:1.15rem;margin-bottom:12px;color:#bbb;font-weight:normal}
 .back-btn{position:fixed;top:12px;left:12px;background:none;border:none;color:#888;
   font-size:1.6rem;cursor:pointer;z-index:10;touch-action:manipulation;padding:8px}
 .done-title{font-size:2.2rem;color:#4ecca3;margin-bottom:16px}
+.pass-flash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.5);
+  font-size:12rem;font-weight:900;color:#4ecca3;pointer-events:none;opacity:0;z-index:50;
+  text-shadow:0 0 40px rgba(78,204,163,.4);line-height:1}
+.pass-flash.show{animation:passPop .55s ease-out forwards}
+@keyframes passPop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}
+  25%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
+  50%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}
+}
 </style>
 </head>
 <body>
 
 <button class="back-btn" id="backBtn" onclick="goBack()" style="display:none">&larr;</button>
+<div class="pass-flash" id="passFlash">○</div>
 
 <!-- Step 1 -->
 <div class="screen active" id="step1">
@@ -484,7 +495,14 @@ function showDone(){
   }
   show(5);
 }
+function showPass(){
+  const el=document.getElementById('passFlash');
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
 function advance(){
+  showPass();
   pIdx++;
   const seq=getSeq();
   if(pIdx>=seq.length){stopDetect();showDone();return}
